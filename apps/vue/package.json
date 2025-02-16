@@ -7,11 +7,10 @@
         "test": "npm run build && npx playwright test",
         "test:watch": "concurrently \"npm run dev\" \"npx playwright test --ui\"",
         "fusion:install": "node -e \"try { if (!require('fs').existsSync('vendor/fusionphp/fusion/packages/vue')) { console.warn('\\x1b[33m%s\\x1b[0m', '⚠️  Fusion package not found - skipping dependency installation'); process.exit(0); } console.log('\\x1b[36m%s\\x1b[0m', '📦 Installing Fusion dependencies...'); require('child_process').execSync('cd vendor/fusionphp/fusion/packages/vue && npm install', {stdio: 'inherit'}); console.log('\\x1b[32m%s\\x1b[0m', '✅ Fusion dependencies installed successfully'); } catch (error) { console.error('\\x1b[31m%s\\x1b[0m', '❌ Error installing Fusion dependencies:'); console.error('\\x1b[31m%s\\x1b[0m', error.message); process.exit(1); }\"",
-
         "postinstall": "npm run fusion:install"
     },
     "devDependencies": {
-        "@fusion/vue": "file:vendor/fusionphp/fusion/packages/vue",
+        "@fusion/vue": "^1.0.0",
         "@inertiajs/vue3": "^2.0.0",
         "@playwright/test": "^1.50.1",
         "@tailwindcss/forms": "^0.5.3",
@@ -25,6 +24,6 @@
         "postcss": "^8.4.31",
         "tailwindcss": "^3.2.1",
         "vite": "^6.0.11",
-        "vue": "^3.4.0"
+        "vue": "^3.0.0"
     }
 }
