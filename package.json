@@ -1,0 +1,8 @@
+{
+  "name": "fusion",
+  "private": true,
+  "workspaces": [
+    "apps/vue",
+    "packages/vue"
+  ]
+}
