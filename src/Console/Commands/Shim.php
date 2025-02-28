@@ -86,10 +86,10 @@ export const fusionActions = [{$fusion}];
 
 let cachedState;
 
-export function useFusion(keys = [], props = {}, useCachedState = false) {
-  const state = (useCachedState && cachedState) ? cachedState : new Pipeline(props).createState();
+export function useFusion(keys = [], props = {}) {
+  const state = cachedState ? cachedState : new Pipeline(props).createState();
 
-  if (!useCachedState) {
+  if (!cachedState) {
     cachedState = state;
   }
 

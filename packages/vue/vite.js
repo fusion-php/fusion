@@ -3,6 +3,7 @@ import {spawnSync} from 'child_process';
 import fs from 'fs';
 import path from "path";
 import Cleanup from "./Cleanup.js";
+import {SourceMapGenerator, SourceMapConsumer} from 'source-map';
 
 const pendingTransforms = new Map();
 
@@ -95,7 +96,12 @@ export default function fusionForVue(options = {}) {
               const fileContent = fs.readFileSync(filename, 'utf-8');
 
               await new Transformer({
-                config: fusionConfig, code: fileContent, filename: filename, isProd
+                config: fusionConfig,
+                code: fileContent,
+                filename: filename,
+                isProd,
+                // Enable source maps
+                sourceMap: true
               }).transform();
             } catch (error) {
               console.error(`Error processing ${filename}:`, error);
@@ -111,7 +117,7 @@ export default function fusionForVue(options = {}) {
 
     async transform(code, filename) {
       if (!filename.endsWith('.vue')) {
-        return code
+        return null; // Return null to let Vite handle non-Vue files
       }
 
       if (pendingTransforms.has(filename)) {
@@ -119,13 +125,53 @@ export default function fusionForVue(options = {}) {
         pendingTransforms.delete(filename);
       }
 
-      code = await new Transformer({
-        config: fusionConfig, code, filename, isProd
-      }).transform();
+      // Create transformer with source map enabled
+      const transformer = new Transformer({
+        config: fusionConfig,
+        code,
+        filename,
+        isProd,
+        // Enable source maps for all transformations
+        sourceMap: true
+      });
 
-      // console.log(code);
+      // Get the transformation result (code + source map)
+      const result = await transformer.transform();
 
-      return code;
+      // When using Recast, the transformer would return both code and source map
+      // For now, we're simulating this behavior
+      if (typeof result === 'object' && result.code && result.map) {
+        // Return both the code and the source map
+        return {
+          code: result.code,
+          map: result.map
+        };
+      }
+
+      // Handle legacy string return format
+      // This is temporary until Transformer is fully migrated to return source maps
+      if (typeof result === 'string') {
+        // Generate a simple source map
+        const sourceMap = new SourceMapGenerator({
+          file: path.basename(filename),
+        });
+
+        // Add a mapping from the original file to the transformed file
+        // This is a simplistic mapping - recast would provide more accurate ones
+        sourceMap.addMapping({
+          generated: {line: 1, column: 0},
+          original: {line: 1, column: 0},
+          source: path.basename(filename)
+        });
+
+        return {
+          code: result,
+          // Convert to the format Vite expects
+          map: sourceMap.toString()
+        };
+      }
+
+      return null;
     },
   }
 }
