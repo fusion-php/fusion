@@ -14,7 +14,7 @@ describe("injector", () => {
       }
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import something from 'somewhere';
       import { useFusion } from "__aliasedFusionPath__";
@@ -37,7 +37,7 @@ describe("injector", () => {
       }
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import { useFusion } from "__aliasedFusionPath__";
       const __default__ = {
@@ -60,7 +60,7 @@ describe("injector", () => {
       }
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import { useFusion as uf } from "__aliasedFusionPath__";
       const __default__ = {
@@ -82,7 +82,7 @@ describe("injector", () => {
       }
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import something from "somewhere";
       import { useFusion } from "__aliasedFusionPath__";
@@ -100,7 +100,7 @@ describe("injector", () => {
   test("handles code with no setup function and single-line default export", () => {
     const code = `import a from "b"; export default { a: 1 };`;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import a from "b";
       import { useFusion } from "__aliasedFusionPath__";
@@ -122,7 +122,7 @@ describe("injector", () => {
       }
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import foo from "bar";
       import { useFusion } from "__aliasedFusionPath__";
@@ -143,7 +143,7 @@ describe("injector", () => {
       export default { x: "y" };
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import { useFusion } from "__aliasedFusionPath__";
       const __default__ = { x: "y" };
@@ -164,7 +164,7 @@ describe("injector", () => {
       };
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import { useFusion } from "__aliasedFusionPath__";
       // This is a default comment
@@ -191,7 +191,7 @@ describe("injector", () => {
       };
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import { something } from "module";
       import { useFusion } from "__aliasedFusionPath__";
@@ -214,7 +214,7 @@ describe("injector", () => {
       export default { z: 9 };;
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import foo from "bar";
       import { useFusion } from "__aliasedFusionPath__";
@@ -236,7 +236,7 @@ describe("injector", () => {
       };
     `;
     const keys = ["name", "email"];
-    const result = injector(code, "test.js", keys);
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", false);
     const expected = `
       import { something } from "somewhere";
       import { useFusion } from "__aliasedFusionPath__";
@@ -247,6 +247,65 @@ describe("injector", () => {
       __default__.setup = function(props) {
         return useFusion(["name", "email"], props.fusion);
       };
+      export default __default__;
+    `;
+    expect(result.code).toMatchCode(expected);
+  });
+
+  test("uses custom fusion path", () => {
+    const code = `
+      import { something } from "somewhere";
+      export default {
+        a: 'hello'
+      };
+    `;
+    const keys = ["name", "email"];
+    const result = injector(code, "test.js", keys, "@custom/fusion", false);
+    const expected = `
+      import { something } from "somewhere";
+      import { useFusion } from "@custom/fusion";
+      const __default__ = {
+        a: 'hello'
+      };
+      __default__.setup = function(props) {
+        return useFusion(["name", "email"], props.fusion);
+      };
+      export default __default__;
+    `;
+    expect(result.code).toMatchCode(expected);
+  });
+
+  test("handles TypeScript code", () => {
+    const code = `
+      interface Props {
+        id: number;
+      }
+      
+      export default {
+        props: {
+          id: Number
+        }
+      };
+    `;
+    const keys = ["name", "email"];
+    const result = injector(code, "test.js", keys, "__aliasedFusionPath__", true);
+    const expected = `
+      import { useFusion } from "__aliasedFusionPath__";
+      
+      interface Props {
+        id: number;
+      }
+      
+      const __default__ = {
+        props: {
+          id: Number
+        }
+      };
+      
+      __default__.setup = function(props) {
+        return useFusion(["name", "email"], props.fusion);
+      };
+      
       export default __default__;
     `;
     expect(result.code).toMatchCode(expected);

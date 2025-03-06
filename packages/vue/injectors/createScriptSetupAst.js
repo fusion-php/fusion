@@ -3,14 +3,15 @@ import recast from "recast";
 
 const {builders: b} = recast.types;
 
-export default function injector(code, fileName, keys) {
-  // Build an AST for a new program (the script setup content)
+export default function injector(code, fileName, keys, fusionPath = "__aliasedFusionPath__", useTypeScript = false) {
+  // The useTypeScript parameter is not used directly here as this injector
+  // creates a new script block rather than parsing existing code
   const program = b.program([]);
 
-  // 1. import { useFusion } from "__aliasedFusionPath__";
+  // 1. import { useFusion } from fusion path
   const importUseFusion = b.importDeclaration(
     [b.importSpecifier(b.identifier("useFusion"), b.identifier("useFusion"))],
-    b.literal("__aliasedFusionPath__")
+    b.literal(fusionPath)
   );
 
   // 2. import useHotFusion from "@fusion/vue/hmr";

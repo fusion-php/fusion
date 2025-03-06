@@ -11,9 +11,9 @@ import recast from "recast";
 
 const {namedTypes: n, builders: b} = recast.types;
 
-export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
-  // Parse the source code.
-  const ast = parseCode(sourceCode, fileName);
+export function optionsWithSetup(sourceCode, fileName = "", keys = [], fusionPath = "__aliasedFusionPath__", useTypeScript = false) {
+  // Parse the source code using explicit TypeScript flag
+  const ast = parseCode(sourceCode, fileName, useTypeScript);
 
   // ------------------------------
   // Step 1: Remove any existing useFusion imports.
@@ -137,7 +137,7 @@ export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
 
   // ------------------------------
   // Step 6: Insert a new import for useFusion.
-  ensureFusionImport(ast, false);
+  ensureFusionImport(ast, false, fusionPath);
 
   // ------------------------------
   // Step 7: Append a wrapper to override the setup function.

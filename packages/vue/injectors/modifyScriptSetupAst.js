@@ -10,12 +10,12 @@ import recast from "recast";
 
 const {builders: b} = recast.types;
 
-export function transformCode(sourceCode, fileName = "", keys = []) {
-  // Parse the source code into an AST
-  const ast = parseCode(sourceCode, fileName);
+export function transformCode(sourceCode, fileName = "", keys = [], fusionPath = "__aliasedFusionPath__", useTypeScript = false) {
+  // Parse the source code into an AST using explicit TypeScript flag
+  const ast = parseCode(sourceCode, fileName, useTypeScript);
 
   // Handle imports and get fusion local name
-  const {fusionLocalName: localName, hasUseFusionImport} = handleFusionImport(ast);
+  const {fusionLocalName: localName, hasUseFusionImport} = handleFusionImport(ast, fusionPath);
   const fusionLocalName = localName || (hasUseFusionImport ? localName : "useFusion");
 
   // Collect keys from existing useFusion calls and update them to include __props.fusion
@@ -34,7 +34,7 @@ export function transformCode(sourceCode, fileName = "", keys = []) {
     if (missingKeys.length > 0) {
       // Ensure the import exists.
       if (!hasUseFusionImport) {
-        ensureFusionImport(ast, hasUseFusionImport);
+        ensureFusionImport(ast, hasUseFusionImport, fusionPath);
       }
 
       // Find the index after the last import.
@@ -62,7 +62,7 @@ export function transformCode(sourceCode, fileName = "", keys = []) {
     // Case 2: No useFusion call exists.
     // Ensure an import for useFusion is injected.
     if (!hasUseFusionImport) {
-      ensureFusionImport(ast, hasUseFusionImport);
+      ensureFusionImport(ast, hasUseFusionImport, fusionPath);
     }
 
     // Find the index after the last import.

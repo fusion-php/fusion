@@ -5,22 +5,23 @@ import babel from "recast/parsers/babel.js";
 const {namedTypes: n, builders: b} = recast.types;
 
 /**
- * Selects the appropriate parser based on file extension
- * @param {string} fileName - Name of the file being processed
+ * Selects the appropriate parser based on typescript flag
+ * @param {boolean} useTypeScript - Whether to use the TypeScript parser
  * @returns {object} The parser to use
  */
-export function selectParser(fileName) {
-  return fileName.endsWith(".ts") || fileName.endsWith(".tsx") ? ts : babel;
+export function selectParser(useTypeScript) {
+  return useTypeScript ? ts : babel;
 }
 
 /**
  * Parse source code into an AST
  * @param {string} sourceCode - Source code to parse
- * @param {string} fileName - File name (used for parser selection and source mapping)
+ * @param {string} fileName - File name (used for source mapping)
+ * @param {boolean} useTypeScript - Whether to use the TypeScript parser
  * @returns {object} The resulting AST
  */
-export function parseCode(sourceCode, fileName = "") {
-  const parser = selectParser(fileName);
+export function parseCode(sourceCode, fileName = "", useTypeScript = false) {
+  const parser = selectParser(useTypeScript);
   return recast.parse(sourceCode, {
     parser,
     sourceFileName: fileName
@@ -30,9 +31,10 @@ export function parseCode(sourceCode, fileName = "") {
 /**
  * Handles useFusion import in AST
  * @param {object} ast - The AST to modify
+ * @param {string} fusionPath - The path to use for the fusion import
  * @returns {object} Object containing information about useFusion imports
  */
-export function handleFusionImport(ast) {
+export function handleFusionImport(ast, fusionPath) {
   let fusionLocalName = null;
   let hasUseFusionImport = false;
 
@@ -54,7 +56,7 @@ export function handleFusionImport(ast) {
           }
         });
         // Update the import source.
-        path.node.source.value = "__aliasedFusionPath__";
+        path.node.source.value = fusionPath;
         hasUseFusionImport = true;
       }
       this.traverse(path);
@@ -68,13 +70,14 @@ export function handleFusionImport(ast) {
  * Adds a useFusion import if one doesn't exist
  * @param {object} ast - The AST to modify
  * @param {boolean} hasUseFusionImport - Whether a useFusion import already exists
+ * @param {string} fusionPath - The path to use for the fusion import
  * @returns {string} The local name for useFusion (default is "useFusion")
  */
-export function ensureFusionImport(ast, hasUseFusionImport) {
+export function ensureFusionImport(ast, hasUseFusionImport, fusionPath) {
   if (!hasUseFusionImport) {
     const fusionImport = b.importDeclaration(
       [b.importSpecifier(b.identifier("useFusion"))],
-      b.literal("__aliasedFusionPath__")
+      b.literal(fusionPath)
     );
 
     // Find the best position to insert the import (after other imports)

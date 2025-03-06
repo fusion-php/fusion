@@ -13,7 +13,7 @@ describe('injector', () => {
       const x = 1;
   `;
 
-    const result = injector(code, 'test.js', ['name', 'email']);
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", false);
 
     expect(result.code).toMatchCode(`
       import something from 'somewhere';
@@ -29,7 +29,7 @@ describe('injector', () => {
       const { data } = useFusion(['name']);
     `;
 
-    const result = injector(code, 'test.js', ['name', 'email']);
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", false);
 
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
@@ -44,7 +44,7 @@ describe('injector', () => {
       const { data } = useFusion(['name']);
     `;
 
-    const result = injector(code, 'test.js', ['name', 'email']);
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", false);
 
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
@@ -59,7 +59,7 @@ describe('injector', () => {
       const { data } = useFusion([]);
     `;
 
-    const result = injector(code, 'test.js', ['name', 'email']);
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", false);
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
       const { name: name, email: email } = useFusion(["name", "email"], __props.fusion);
@@ -73,7 +73,7 @@ describe('injector', () => {
       const { data } = useFusion  (  ['name']  );
     `;
 
-    const result = injector(code, 'test.js', ['name', 'email']);
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", false);
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
       const { email: email } = useFusion(["email"], __props.fusion);
@@ -90,7 +90,7 @@ describe('injector', () => {
       ]);
     `;
 
-    const result = injector(code, 'test.js', ['name', 'email', 'phone']);
+    const result = injector(code, 'test.js', ['name', 'email', 'phone'], "__aliasedFusionPath__", false);
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
       const { phone: phone } = useFusion(["phone"], __props.fusion);
@@ -106,7 +106,7 @@ describe('injector', () => {
       const { data } = useFusion(['name']);
     `;
 
-    const result = injector(code, 'test.js', ['name', 'email']);
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", false);
     expect(result.code).toMatchCode(`
       import { something } from 'somewhere'; 
       import { useFusion, otherThing } from "__aliasedFusionPath__"; 
@@ -122,7 +122,7 @@ describe('injector', () => {
       const { data } = useFusion(["name"]);
     `;
 
-    const result = injector(code, 'test.js', ['name', 'email']);
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", false);
 
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
@@ -137,7 +137,7 @@ describe('injector', () => {
       const { data } = useFusion(['name', "email"]);
     `;
 
-    const result = injector(code, 'test.js', ['name', 'email', 'phone']);
+    const result = injector(code, 'test.js', ['name', 'email', 'phone'], "__aliasedFusionPath__", false);
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
       const { phone: phone } = useFusion(["phone"], __props.fusion);
@@ -150,7 +150,7 @@ describe('injector', () => {
     const x = 42;
   `;
 
-    const result = injector(code, 'test.js', ['a', 'b']);
+    const result = injector(code, 'test.js', ['a', 'b'], "__aliasedFusionPath__", false);
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
       const { data: data } = useFusion(["a", "b"], __props.fusion);
@@ -164,7 +164,7 @@ describe('injector', () => {
     const data = useFusion(['name',]);
   `;
 
-    const result = injector(code, 'test.js', ['name', 'email']);
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", false);
 
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
@@ -179,7 +179,7 @@ describe('injector', () => {
       const data = uf(['name']);
     `;
 
-    const result = injector(code, 'test.js', ['name', 'email']);
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", false);
 
     expect(result.code).toMatchCode(`
       import { useFusion as uf } from "__aliasedFusionPath__";
@@ -195,7 +195,7 @@ describe('injector', () => {
     const b = useFusion(['email']);
   `;
 
-    const result = injector(code, 'test.js', ['name', 'email', 'phone']);
+    const result = injector(code, 'test.js', ['name', 'email', 'phone'], "__aliasedFusionPath__", false);
 
     expect(result.code).toMatchCode(`
       import { useFusion } from "__aliasedFusionPath__";
@@ -204,7 +204,35 @@ describe('injector', () => {
       const a = useFusion(['name'], __props.fusion);
       const b = useFusion(['email'], __props.fusion);
     `);
-
   });
 
+  test('uses custom fusion path', () => {
+    const code = `
+      import { useFusion } from '@/lib/fusion';
+      const { data } = useFusion(['name']);
+    `;
+
+    const result = injector(code, 'test.js', ['name', 'email'], "@myorg/fusion", false);
+
+    expect(result.code).toMatchCode(`
+      import { useFusion } from "@myorg/fusion";
+      const { email: email } = useFusion(["email"], __props.fusion);
+      const { data } = useFusion(['name'], __props.fusion);
+    `);
+  });
+
+  test('handles TypeScript code', () => {
+    const code = `
+      import { useFusion } from '@/lib/fusion';
+      const { data } = useFusion<string[]>(['name']);
+    `;
+
+    const result = injector(code, 'test.js', ['name', 'email'], "__aliasedFusionPath__", true);
+
+    expect(result.code).toMatchCode(`
+      import { useFusion } from "__aliasedFusionPath__";
+      const { email: email } = useFusion(["email"], __props.fusion);
+      const { data } = useFusion<string[]>(['name'], __props.fusion);
+    `);
+  });
 });

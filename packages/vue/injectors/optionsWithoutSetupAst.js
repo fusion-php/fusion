@@ -10,16 +10,19 @@ import recast from "recast";
 
 const {builders: b} = recast.types;
 
-export default function injector(code, fileName, keys) {
-  // Parse the source code using Babel's parser.
+export default function injector(code, fileName, keys, fusionPath = "__aliasedFusionPath__", useTypeScript = false) {
+  // Use the explicit TypeScript flag instead of inferring from filename
+  const parser = useTypeScript ? babelParser : babelParser; // Both use babelParser in this file
+
+  // Parse the source code using the appropriate parser.
   const ast = recast.parse(code, {
-    parser: babelParser,
+    parser,
     sourceFileName: fileName
   });
 
   // 1. Determine the local name for useFusion.
-  const {fusionLocalName: localName, hasUseFusionImport} = handleFusionImport(ast);
-  const fusionLocalName = localName || ensureFusionImport(ast, hasUseFusionImport) || "useFusion";
+  const {fusionLocalName: localName, hasUseFusionImport} = handleFusionImport(ast, fusionPath);
+  const fusionLocalName = localName || ensureFusionImport(ast, hasUseFusionImport, fusionPath) || "useFusion";
 
   // 2. Rewrite the default export:
   extractDefaultExport(ast);
