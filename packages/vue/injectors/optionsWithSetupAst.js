@@ -1,19 +1,19 @@
+import {
+  parseCode,
+  handleFusionImport,
+  ensureFusionImport,
+  extractDefaultExport,
+  createFusionCall,
+  createDefaultExport,
+  generateCode
+} from "./ast-utils.js";
 import recast from "recast";
-import ts from "recast/parsers/typescript.js";
-import babel from "recast/parsers/babel.js";
 
 const {namedTypes: n, builders: b} = recast.types;
 
 export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
-  // Choose the appropriate parser.
-  const parser =
-    fileName.endsWith(".ts") || fileName.endsWith(".tsx") ? ts : babel;
-
   // Parse the source code.
-  const ast = recast.parse(sourceCode, {
-    parser,
-    sourceFileName: fileName
-  });
+  const ast = parseCode(sourceCode, fileName);
 
   // ------------------------------
   // Step 1: Remove any existing useFusion imports.
@@ -35,20 +35,7 @@ export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
 
   // ------------------------------
   // Step 2: Find the default export (an object) and rewrite it as __default__.
-  let defaultExportObject = null;
-  recast.types.visit(ast, {
-    visitExportDefaultDeclaration(path) {
-      if (n.ObjectExpression.check(path.node.declaration)) {
-        defaultExportObject = path.node.declaration;
-        const defaultVarDecl = b.variableDeclaration("const", [
-          b.variableDeclarator(b.identifier("__default__"), defaultExportObject)
-        ]);
-        path.replace(defaultVarDecl);
-        return false;
-      }
-      this.traverse(path);
-    }
-  });
+  const defaultExportObject = extractDefaultExport(ast);
   if (!defaultExportObject) {
     throw new Error("Default export is not an object expression.");
   }
@@ -91,10 +78,11 @@ export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
   }
 
   // ------------------------------
-  // Step 4: Traverse the setup() function body.
-  // Update any useFusion calls and collect the keys used.
+  // Step 4: Create a custom visitor for the setup function body to collect keys and update useFusion calls
+  // This is specialized for the options with setup case where we need to use __fusionProvidedProps
   const fusionUsedKeys = new Set();
   let foundUseFusionCall = false;
+
   recast.types.visit(setupFunctionNode, {
     visitCallExpression(path) {
       if (
@@ -123,7 +111,8 @@ export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
             // Else: explicitly passed empty array—leave it as-is.
           }
         }
-        // In all cases, update the call to add a second parameter.
+
+        // In all cases, update the call to add a second parameter with logical OR fallback
         path.node.arguments = [
           path.node.arguments[0],
           b.logicalExpression(
@@ -148,44 +137,36 @@ export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
 
   // ------------------------------
   // Step 6: Insert a new import for useFusion.
-  let lastImportIndex = -1;
-  ast.program.body.forEach((node, idx) => {
-    if (n.ImportDeclaration.check(node)) {
-      lastImportIndex = idx;
-    }
-  });
-  const fusionImport = b.importDeclaration(
-    [b.importSpecifier(b.identifier("useFusion"))],
-    b.literal("__aliasedFusionPath__")
-  );
-  ast.program.body.splice(lastImportIndex + 1, 0, fusionImport);
+  ensureFusionImport(ast, false);
 
   // ------------------------------
   // Step 7: Append a wrapper to override the setup function.
-  // If a useFusion call exists, then missingKeys (the keys not handled inside setup) are used;
-  // otherwise, all provided keys are used.
   const missingKeysForWrapper = foundUseFusionCall ? missingKeys : keys;
   let fusionDataDecl;
+
   if (missingKeysForWrapper.length === 0) {
     fusionDataDecl = b.variableDeclaration("const", [
       b.variableDeclarator(b.identifier("fusionData"), b.objectExpression([]))
     ]);
   } else {
-    const missingArrayExpr = b.arrayExpression(
-      missingKeysForWrapper.map(key => b.literal(key))
+    const fusionDataCall = createFusionCall(
+      "useFusion",
+      missingKeysForWrapper,
+      "props.fusion"
     );
-    const fusionDataCall = b.callExpression(b.identifier("useFusion"), [
-      missingArrayExpr,
-      b.logicalExpression(
-        "||",
-        b.memberExpression(b.identifier("props"), b.identifier("fusion")),
-        b.objectExpression([])
-      )
-    ]);
+
+    // Wrap in a logical expression for the || fallback
+    fusionDataCall.arguments[1] = b.logicalExpression(
+      "||",
+      fusionDataCall.arguments[1],
+      b.objectExpression([])
+    );
+
     fusionDataDecl = b.variableDeclaration("const", [
       b.variableDeclarator(b.identifier("fusionData"), fusionDataCall)
     ]);
   }
+
   const userReturnsDecl = b.variableDeclaration("let", [
     b.variableDeclarator(
       b.identifier("userReturns"),
@@ -203,6 +184,7 @@ export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
       )
     )
   ]);
+
   const newSetupBody = b.blockStatement([
     b.expressionStatement(
       b.assignmentExpression("=", b.identifier("__fusionProvidedProps"), b.identifier("props"))
@@ -216,6 +198,7 @@ export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
       ])
     )
   ]);
+
   const newSetupFunc = b.functionExpression(null, [b.identifier("props"), b.identifier("ctx")], newSetupBody);
   const userSetupDecl = b.variableDeclaration("const", [
     b.variableDeclarator(
@@ -223,6 +206,7 @@ export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
       b.memberExpression(b.identifier("__default__"), b.identifier("setup"))
     )
   ]);
+
   const setupOverride = b.expressionStatement(
     b.assignmentExpression(
       "=",
@@ -230,15 +214,13 @@ export function optionsWithSetup(sourceCode, fileName = "", keys = []) {
       newSetupFunc
     )
   );
-  const exportDefaultDecl = b.exportDefaultDeclaration(b.identifier("__default__"));
+
+  const exportDefaultDecl = createDefaultExport();
   ast.program.body.push(userSetupDecl, setupOverride, exportDefaultDecl);
 
   // ------------------------------
   // Generate output.
-  const output = recast.print(ast, {
-    quote: "double",
-    sourceMapName: fileName || "transformed.js"
-  });
+  const output = generateCode(ast, fileName);
   return {code: output.code, map: output.map, remaining: missingKeys};
 }
 

@@ -1,7 +1,7 @@
+import {createFusionCall} from "./ast-utils.js";
 import recast from "recast";
-import babel from "recast/parsers/babel.js";
 
-const {namedTypes: n, builders: b} = recast.types;
+const {builders: b} = recast.types;
 
 export default function injector(code, fileName, keys) {
   // Build an AST for a new program (the script setup content)
@@ -20,9 +20,8 @@ export default function injector(code, fileName, keys) {
   );
 
   // 3. const __fusionData = useFusion([<keys>], __props.fusion);
-  // Build an array expression with each key as an identifier.
-  const keyIdentifiers = keys.map((key) => b.identifier(key));
-  const arrayExpr = b.arrayExpression(keyIdentifiers);
+  // Build an array expression with each key as an identifier and create the call
+  const arrayExpr = b.arrayExpression(keys.map(key => b.identifier(key)));
   const fusionMemberExpr = b.memberExpression(b.identifier("__props"), b.identifier("fusion"));
   const callUseFusion = b.callExpression(b.identifier("useFusion"), [arrayExpr, fusionMemberExpr]);
   const declFusionData = b.variableDeclaration("const", [

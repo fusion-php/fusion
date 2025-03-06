@@ -1,85 +1,31 @@
+import {
+  parseCode,
+  handleFusionImport,
+  ensureFusionImport,
+  collectKeysFromFusionCalls,
+  createFusionCall,
+  generateCode
+} from "./ast-utils.js";
 import recast from "recast";
-import ts from "recast/parsers/typescript.js";
-import babel from "recast/parsers/babel.js";
 
-const {namedTypes: n, builders: b} = recast.types;
+const {builders: b} = recast.types;
 
 export function transformCode(sourceCode, fileName = "", keys = []) {
-  // Choose the appropriate parser based on the file extension.
-  const parser =
-    fileName.endsWith(".ts") || fileName.endsWith(".tsx")
-      ? ts
-      : babel;
+  // Parse the source code into an AST
+  const ast = parseCode(sourceCode, fileName);
 
-  // Parse the source code into an AST, tagging it with the source file name.
-  const ast = recast.parse(sourceCode, {parser, sourceFileName: fileName});
+  // Handle imports and get fusion local name
+  const {fusionLocalName: localName, hasUseFusionImport} = handleFusionImport(ast);
+  const fusionLocalName = localName || (hasUseFusionImport ? localName : "useFusion");
 
-  let foundUseFusionCall = false;
-  let hasUseFusionImport = false;
-  // Will hold the local name (alias) of useFusion if imported.
-  let fusionLocalName = null;
-  const usedKeys = new Set();
+  // Collect keys from existing useFusion calls and update them to include __props.fusion
+  const {
+    foundUseFusionCall,
+    usedKeys
+  } = collectKeysFromFusionCalls(ast, fusionLocalName || "useFusion", "__props.fusion");
 
-  // Traverse the AST to update the import and any useFusion calls.
-  recast.types.visit(ast, {
-    // Update any import that includes a specifier with imported name "useFusion".
-    visitImportDeclaration(path) {
-      const specifiers = path.node.specifiers;
-      if (specifiers && specifiers.some(spec => {
-        return n.ImportSpecifier.check(spec) &&
-          spec.imported &&
-          spec.imported.name === "useFusion";
-      })) {
-        // Find the first specifier for useFusion and record its local name.
-        specifiers.forEach(spec => {
-          if (n.ImportSpecifier.check(spec) &&
-            spec.imported &&
-            spec.imported.name === "useFusion") {
-            fusionLocalName = spec.local.name;
-          }
-        });
-        // Update the import source to our alias.
-        path.node.source.value = "__aliasedFusionPath__";
-        hasUseFusionImport = true;
-      }
-      this.traverse(path);
-    },
-    // Update useFusion calls (if any) and collect the keys used.
-    visitCallExpression(path) {
-      // Check if the callee matches the local name for useFusion.
-      if (
-        n.Identifier.check(path.node.callee) &&
-        path.node.callee.name === (fusionLocalName || "useFusion")
-      ) {
-        foundUseFusionCall = true;
-        // If the first argument is an array literal, collect its string elements.
-        if (
-          path.node.arguments.length > 0 &&
-          n.ArrayExpression.check(path.node.arguments[0])
-        ) {
-          const arrExpr = path.node.arguments[0];
-          arrExpr.elements.forEach(element => {
-            if (n.Literal.check(element) && typeof element.value === "string") {
-              usedKeys.add(element.value);
-            }
-          });
-        }
-        // Update the call to useFusion:
-        // Keep the original first argument (or an empty array if missing),
-        // then add __props.fusion.
-        const originalFirstArg =
-          path.node.arguments.length > 0 ? path.node.arguments[0] : b.arrayExpression([]);
-        path.node.arguments = [
-          originalFirstArg,
-          b.memberExpression(b.identifier("__props"), b.identifier("fusion"))
-        ];
-      }
-      this.traverse(path);
-    }
-  });
-
-  // Compute the missing keys (if any).
-  let missingKeys = keys.filter(key => !usedKeys.has(key));
+  // Compute the missing keys (if any)
+  const missingKeys = keys.filter(key => !usedKeys.has(key));
 
   // Two main injection strategies:
   if (foundUseFusionCall) {
@@ -88,14 +34,9 @@ export function transformCode(sourceCode, fileName = "", keys = []) {
     if (missingKeys.length > 0) {
       // Ensure the import exists.
       if (!hasUseFusionImport) {
-        fusionLocalName = "useFusion";
-        const importDeclaration = b.importDeclaration(
-          [b.importSpecifier(b.identifier("useFusion"))],
-          b.literal("__aliasedFusionPath__")
-        );
-        ast.program.body.unshift(importDeclaration);
-        hasUseFusionImport = true;
+        ensureFusionImport(ast, hasUseFusionImport);
       }
+
       // Find the index after the last import.
       let lastImportIndex = -1;
       for (let i = 0; i < ast.program.body.length; i++) {
@@ -103,20 +44,17 @@ export function transformCode(sourceCode, fileName = "", keys = []) {
           lastImportIndex = i;
         }
       }
+
       // Build a variable declaration:
-      // const { key1, key2, ... } = <alias>(["key1", "key2", ...], __props.fusion);
       const properties = missingKeys.map(key =>
         b.property("init", b.identifier(key), b.identifier(key), false, false)
       );
       const objectPattern = b.objectPattern(properties);
-      const arrayExpr = b.arrayExpression(missingKeys.map(key => b.literal(key)));
-      const callExpr = b.callExpression(b.identifier(fusionLocalName || "useFusion"), [
-        arrayExpr,
-        b.memberExpression(b.identifier("__props"), b.identifier("fusion"))
-      ]);
+      const callExpr = createFusionCall(fusionLocalName || "useFusion", missingKeys, "__props.fusion");
       const varDecl = b.variableDeclaration("const", [
         b.variableDeclarator(objectPattern, callExpr)
       ]);
+
       // Insert the new declaration after the last import.
       ast.program.body.splice(lastImportIndex + 1, 0, varDecl);
     }
@@ -124,26 +62,19 @@ export function transformCode(sourceCode, fileName = "", keys = []) {
     // Case 2: No useFusion call exists.
     // Ensure an import for useFusion is injected.
     if (!hasUseFusionImport) {
-      fusionLocalName = "useFusion";
-      const importDeclaration = b.importDeclaration(
-        [b.importSpecifier(b.identifier("useFusion"))],
-        b.literal("__aliasedFusionPath__")
-      );
-      ast.program.body.unshift(importDeclaration);
-      hasUseFusionImport = true;
+      ensureFusionImport(ast, hasUseFusionImport);
     }
-    // In this case, inject a call that returns { data } using all provided keys.
+
+    // Find the index after the last import.
     let lastImportIndex = -1;
     for (let i = 0; i < ast.program.body.length; i++) {
       if (ast.program.body[i].type === "ImportDeclaration") {
         lastImportIndex = i;
       }
     }
-    const arrayExpr = b.arrayExpression(keys.map(key => b.literal(key)));
-    const callExpr = b.callExpression(b.identifier(fusionLocalName || "useFusion"), [
-      arrayExpr,
-      b.memberExpression(b.identifier("__props"), b.identifier("fusion"))
-    ]);
+
+    // Insert a call that returns { data } using all provided keys.
+    const callExpr = createFusionCall(fusionLocalName || "useFusion", keys, "__props.fusion");
     const varDecl = b.variableDeclaration("const", [
       // We destructure "data" as the default property.
       b.variableDeclarator(
@@ -151,16 +82,14 @@ export function transformCode(sourceCode, fileName = "", keys = []) {
         callExpr
       )
     ]);
+
     ast.program.body.splice(lastImportIndex + 1, 0, varDecl);
     // In this branch, all keys are handled.
-    missingKeys = [];
+    missingKeys.length = 0;
   }
 
   // Generate the output code with a source map.
-  const output = recast.print(ast, {
-    quote: "double",
-    sourceMapName: fileName || "transformed.js"
-  });
+  const output = generateCode(ast, fileName);
 
   return {code: output.code, map: output.map, remaining: missingKeys};
 }

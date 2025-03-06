@@ -111,12 +111,13 @@ export function createFusionCall(fusionLocalName, keys, propsMember) {
 }
 
 /**
- * Collects keys from existing useFusion calls
+ * Collects keys from existing useFusion calls and updates the calls to include props.fusion
  * @param {object} ast - The AST to traverse
  * @param {string} fusionLocalName - The local name for useFusion
+ * @param {string} propsMember - The property access for fusion (e.g., "__props.fusion")
  * @returns {object} Object with foundUseFusionCall flag and set of keys
  */
-export function collectKeysFromFusionCalls(ast, fusionLocalName) {
+export function collectKeysFromFusionCalls(ast, fusionLocalName, propsMember = "__props.fusion") {
   let foundUseFusionCall = false;
   const usedKeys = new Set();
 
@@ -139,6 +140,20 @@ export function collectKeysFromFusionCalls(ast, fusionLocalName) {
             }
           });
         }
+
+        // Update the call to include the props.fusion parameter
+        const fusionMemberExpr = b.memberExpression(
+          b.identifier(propsMember.split('.')[0]),
+          b.identifier(propsMember.split('.')[1])
+        );
+
+        // Keep the original first argument or create an empty array if missing
+        const firstArg = path.node.arguments.length > 0
+          ? path.node.arguments[0]
+          : b.arrayExpression([]);
+
+        // Update arguments to include props.fusion
+        path.node.arguments = [firstArg, fusionMemberExpr];
       }
       this.traverse(path);
     }

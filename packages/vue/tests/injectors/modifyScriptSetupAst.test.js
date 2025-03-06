@@ -16,8 +16,8 @@ describe('injector', () => {
     const result = injector(code, 'test.js', ['name', 'email']);
 
     expect(result.code).toMatchCode(`
-      import { useFusion } from "__aliasedFusionPath__";
       import something from 'somewhere';
+      import { useFusion } from "__aliasedFusionPath__";
       const { data: data } = useFusion(["name", "email"], __props.fusion);
       const x = 1;
     `);
