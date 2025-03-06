@@ -16,13 +16,13 @@ describe("injector", () => {
     const keys = ["name", "email"];
     const result = injector(code, "test.js", keys);
     const expected = `
-      import { useFusion } from "__aliasedFusionPath__";
       import something from 'somewhere';
+      import { useFusion } from "__aliasedFusionPath__";
       const __default__ = {
         foo: 1
       };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -44,7 +44,7 @@ describe("injector", () => {
         bar: "test"
       };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -67,7 +67,7 @@ describe("injector", () => {
         bar: "test"
       };
       __default__.setup = function(props) {
-        return uf([__exportedKeysAsQuotedCsv__], props.fusion);
+        return uf(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -84,13 +84,13 @@ describe("injector", () => {
     const keys = ["name", "email"];
     const result = injector(code, "test.js", keys);
     const expected = `
-      import { useFusion } from "__aliasedFusionPath__";
       import something from "somewhere";
+      import { useFusion } from "__aliasedFusionPath__";
       const __default__ = {
          foo: 42
       };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -102,11 +102,11 @@ describe("injector", () => {
     const keys = ["name", "email"];
     const result = injector(code, "test.js", keys);
     const expected = `
-      import { useFusion } from "__aliasedFusionPath__";
       import a from "b";
+      import { useFusion } from "__aliasedFusionPath__";
       const __default__ = { a: 1 };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -124,14 +124,14 @@ describe("injector", () => {
     const keys = ["name", "email"];
     const result = injector(code, "test.js", keys);
     const expected = `
-      import { useFusion } from "__aliasedFusionPath__";
       import foo from "bar";
+      import { useFusion } from "__aliasedFusionPath__";
       const __default__ = {
         a: 1,
         b: 2
       };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -148,7 +148,7 @@ describe("injector", () => {
       import { useFusion } from "__aliasedFusionPath__";
       const __default__ = { x: "y" };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -174,7 +174,7 @@ describe("injector", () => {
         x: 123 
       };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -193,15 +193,15 @@ describe("injector", () => {
     const keys = ["name", "email"];
     const result = injector(code, "test.js", keys);
     const expected = `
-      import { useFusion } from "__aliasedFusionPath__";
       import { something } from "module";
+      import { useFusion } from "__aliasedFusionPath__";
       const __default__ = {
         a: 1,
         b: function() { return 2; },
         c: "hello"
       };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -216,11 +216,11 @@ describe("injector", () => {
     const keys = ["name", "email"];
     const result = injector(code, "test.js", keys);
     const expected = `
-      import { useFusion } from "__aliasedFusionPath__";
       import foo from "bar";
+      import { useFusion } from "__aliasedFusionPath__";
       const __default__ = { z: 9 };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
@@ -238,14 +238,14 @@ describe("injector", () => {
     const keys = ["name", "email"];
     const result = injector(code, "test.js", keys);
     const expected = `
-      import { useFusion } from "__aliasedFusionPath__";
       import { something } from "somewhere";
+      import { useFusion } from "__aliasedFusionPath__";
       const __default__ = {
         a: 'hello',
         b: "world"
       };
       __default__.setup = function(props) {
-        return useFusion([__exportedKeysAsQuotedCsv__], props.fusion);
+        return useFusion(["name", "email"], props.fusion);
       };
       export default __default__;
     `;
