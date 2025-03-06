@@ -4,7 +4,7 @@ import optionsWithSetupAst from '../../injectors/optionsWithSetupAst.js';
 
 setupCodeMatcher();
 
-describe.only('optionsWithSetupAst', () => {
+describe('optionsWithSetupAst', () => {
   test('handles code with no useFusion call', () => {
     const code = `
     import something from 'somewhere';

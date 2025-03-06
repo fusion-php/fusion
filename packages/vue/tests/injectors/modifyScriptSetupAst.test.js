@@ -6,7 +6,7 @@ import injector from '../../injectors/modifyScriptSetupAst.js';
 // Setup the custom matcher
 setupCodeMatcher();
 
-describe.only('injector', () => {
+describe('injector', () => {
   test('handles code with no useFusion import', () => {
     const code = `
       import something from 'somewhere';
