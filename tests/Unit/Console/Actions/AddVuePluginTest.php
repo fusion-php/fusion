@@ -9,11 +9,8 @@ use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 
-
-
 class AddVuePluginTest extends Base
 {
-
     private AddVuePlugin $action;
 
     protected function setUp(): void
@@ -212,5 +209,4 @@ createInertiaApp({
 initializeTheme();
 ";
     }
-
 }
