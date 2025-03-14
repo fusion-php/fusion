@@ -15,6 +15,8 @@ class AddViteConfig
 {
     use InteractsWithIO;
 
+    protected ?string $configName;
+
     public function __construct(InputInterface $input, OutputInterface $output)
     {
         $this->input = $input;
@@ -23,14 +25,11 @@ class AddViteConfig
 
     public function handle()
     {
-        $configPath = base_path('vite.config.js');
-
-        // Check if vite.config.js exists
-        if (!File::exists($configPath)) {
-            $this->error('[Vite] vite.config.js not found in the project root!');
-
+        if (!$this->findViteConfig()) {
             return 1;
         }
+
+        $configPath = base_path($this->configName);
 
         $content = File::get($configPath);
 
@@ -42,7 +41,7 @@ class AddViteConfig
         }
 
         // Create backup only if we need to make changes
-        $backupPath = base_path('vite.config.js.backup');
+        $backupPath = base_path("{$this->configName}.backup");
         File::copy($configPath, $backupPath);
 
         try {
@@ -55,8 +54,8 @@ class AddViteConfig
             // Write modified content back to file
             File::put($configPath, $content);
 
-            $this->info('[Vite] Successfully added Fusion plugin to vite.config.js');
-            $this->info('[Vite] Backup created at vite.config.js.backup');
+            $this->info("[Vite] Successfully added Fusion plugin to {$this->configName}");
+            $this->info("[Vite] Backup created at {$this->configName}.backup");
 
             return 0;
         } catch (\Exception $e) {
@@ -77,7 +76,7 @@ class AddViteConfig
         preg_match_all('/^import .+$/m', $content, $matches);
 
         if (empty($matches[0])) {
-            throw new \Exception('Could not find import statements in vite.config.js');
+            throw new \Exception("Could not find import statements in {$this->configName}");
         }
 
         $lastImport = end($matches[0]);
@@ -94,7 +93,7 @@ class AddViteConfig
     {
         // Extract the plugins array content
         if (!preg_match('/plugins:\s*\[(.*?)\]/s', $content, $matches)) {
-            throw new \Exception('Could not find plugins array in vite.config.js');
+            throw new \Exception("Could not find plugins array in {$this->configName}");
         }
 
         // Get the current indentation level
@@ -119,5 +118,21 @@ class AddViteConfig
         $content = preg_replace('/,\s*\n\s*\]/', "\n" . $baseIndent . ']', $content);
 
         return $content;
+    }
+
+    private function findViteConfig(): bool
+    {
+        $this->configName = collect(['vite.config.js', 'vite.config.ts'])
+            ->filter(fn(string $configName) => File::exists(base_path($configName)))
+            ->first();
+
+        // Check if vite.config.[js/ts] exists
+        if (!$this->configName) {
+            $this->error('[Vite] vite.config.[js/ts] not found in the project root!');
+
+            return false;
+        }
+
+        return true;
     }
 }
