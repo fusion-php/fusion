@@ -25,7 +25,6 @@ class AddVuePlugin
 
     public function handle()
     {
-
         if (!$this->findAppEntry()) {
             return 1;
         }
@@ -85,7 +84,7 @@ class AddVuePlugin
         // Add fusion import after the last import
         return str_replace(
             $lastImport,
-            $lastImport . "\nimport fusion from '@fusion/vue/vue';",
+            $lastImport."\nimport fusion from '@fusion/vue/vue';",
             $content
         );
     }
@@ -93,7 +92,7 @@ class AddVuePlugin
     private function addFusionPlugin(string $content): string
     {
         // Find the createApp chain
-        if (!preg_match('/createApp.*?mount\(el\);/s', $content, $matches)) {
+        if (!preg_match('/createApp\(.*?mount\(el\);/s', $content, $matches)) {
             throw new \Exception("Could not find createApp chain in {$this->appEntry}");
         }
 
@@ -104,17 +103,14 @@ class AddVuePlugin
             throw new \Exception('Could not parse createApp chain structure');
         }
 
-        $beforeMount = $matches[1];
+        $beforeMount = trim($matches[1]);
 
-        // Find the base indentation of the return statement
-        preg_match('/^(\s+)createApp/m', $content, $indentMatches);
+        // Find the base indentation of the mount function
+        preg_match('/^(\s+).mount\(/m', $content, $indentMatches);
         $baseIndent = $indentMatches[1] ?? '    ';
 
-        // Calculate the chain indentation (2 spaces more than the previous line)
-        $chainIndent = $baseIndent . '  ';
-
         // Add .use(fusion) with proper indentation
-        $modifiedChain = $beforeMount . "\n" . $chainIndent . '.use(fusion)' . "\n" . $chainIndent . '.mount(el);';
+        $modifiedChain = $beforeMount."\n".$baseIndent.'.use(fusion)'."\n".$baseIndent.'.mount(el);';
 
         return str_replace($createAppChain, $modifiedChain, $content);
     }
