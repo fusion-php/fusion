@@ -84,7 +84,7 @@ class AddVuePlugin
         // Add fusion import after the last import
         return str_replace(
             $lastImport,
-            $lastImport."\nimport fusion from '@fusion/vue/vue';",
+            $lastImport . "\nimport fusion from '@fusion/vue/vue';",
             $content
         );
     }
@@ -110,7 +110,7 @@ class AddVuePlugin
         $baseIndent = $indentMatches[1] ?? '    ';
 
         // Add .use(fusion) with proper indentation
-        $modifiedChain = $beforeMount."\n".$baseIndent.'.use(fusion)'."\n".$baseIndent.'.mount(el);';
+        $modifiedChain = $beforeMount . "\n" . $baseIndent . '.use(fusion)' . "\n" . $baseIndent . '.mount(el);';
 
         return str_replace($createAppChain, $modifiedChain, $content);
     }
