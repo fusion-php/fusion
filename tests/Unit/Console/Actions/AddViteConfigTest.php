@@ -11,26 +11,25 @@ use Symfony\Component\Console\Output\NullOutput;
 
 class AddViteConfigTest extends Base
 {
-
     private AddViteConfig $action;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
-        app()->setBasePath(__DIR__.'/__test');
+        app()->setBasePath(__DIR__ . '/__test');
 
-        File::ensureDirectoryExists(__DIR__.'/__test');
+        File::ensureDirectoryExists(__DIR__ . '/__test');
         File::put(base_path('vite.config.js'), $this->viteConfigOriginalString());
 
         $this->action = app()->make(AddViteConfig::class, [
             'input' => new ArrayInput([]),
-            'output' => new NullOutput(),
+            'output' => new NullOutput,
         ]);
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
-        File::deleteDirectory(__DIR__.'/__test');
+        File::deleteDirectory(__DIR__ . '/__test');
         parent::tearDown();
     }
 
@@ -139,5 +138,4 @@ export default defineConfig({
 });
 ";
     }
-
 }

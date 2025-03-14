@@ -84,7 +84,7 @@ class AddViteConfig
         // Add fusion import after the last import
         return str_replace(
             $lastImport,
-            $lastImport."\nimport fusion from '@fusion/vue/vite';",
+            $lastImport . "\nimport fusion from '@fusion/vue/vite';",
             $content
         );
     }
@@ -99,10 +99,10 @@ class AddViteConfig
         // Get the current indentation level
         preg_match('/^(\s+)plugins:/m', $content, $indentMatches);
         $baseIndent = $indentMatches[1] ?? '  ';
-        $pluginIndent = $baseIndent.'  ';
+        $pluginIndent = $baseIndent . '  ';
 
         // Format the fusion plugin with proper indentation
-        $fusionPlugin = "\n".$pluginIndent.'fusion(),';
+        $fusionPlugin = "\n" . $pluginIndent . 'fusion(),';
 
         // Find the position right after the opening bracket of the plugins array
         $pluginsStart = strpos($content, 'plugins: [') + strlen('plugins: [');
@@ -115,7 +115,7 @@ class AddViteConfig
 
         // Ensure consistent spacing around brackets
         $content = preg_replace('/\[\s+\n/', "[\n", $content);
-        $content = preg_replace('/,\s*\n\s*\]/', "\n".$baseIndent.']', $content);
+        $content = preg_replace('/,\s*\n\s*\]/', "\n" . $baseIndent . ']', $content);
 
         return $content;
     }
@@ -129,6 +129,7 @@ class AddViteConfig
         // Check if vite.config.[js/ts] exists
         if (!$this->configName) {
             $this->error('[Vite] vite.config.[js/ts] not found in the project root!');
+
             return false;
         }
 
